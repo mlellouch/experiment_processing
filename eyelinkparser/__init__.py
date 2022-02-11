@@ -21,6 +21,7 @@ from datamatrix.py3compat import *
 from eyelinkparser._events import sample, fixation, saccade, blink
 from eyelinkparser._traceprocessor import defaulttraceprocessor
 from eyelinkparser._eyelinkparser import EyeLinkParser
+from eyelinkparser._eyelinkplusparser import EyeLinkPlusParser
 
 __version__ = u'0.15.0'
 
