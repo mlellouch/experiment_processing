@@ -23,9 +23,26 @@ from eyelinkparser._traceprocessor import defaulttraceprocessor
 from eyelinkparser._eyelinkparser import EyeLinkParser
 from eyelinkparser._eyelinkplusparser import EyeLinkPlusParser
 
+import tempfile
+import os
+import shutil
+
 __version__ = u'0.15.0'
 
 
 def parse(parser=EyeLinkParser, **kwdict):
 
     return parser(**kwdict).dm
+
+
+def parse_file(parser=EyeLinkPlusParser, filepath='', **kwdicts):
+    assert os.path.isfile(filepath)
+    filename = os.path.basename(filepath)
+    temp_dir = tempfile.TemporaryDirectory()
+    dst = os.path.join(temp_dir.name, filename)
+    shutil.copy(src=filepath, dst=dst)
+
+    kwdicts['folder'] = temp_dir.name
+    return parser(**kwdicts)
+
+

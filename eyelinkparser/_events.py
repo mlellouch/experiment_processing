@@ -52,13 +52,14 @@ class Blink(Event):
     
     def __init__(self, l):
         self.assert_numeric(l, range(2, 5))
+        assert Blink.match(l)
         self.st = l[2]
         self.et = l[3]
-        self.duration = l[5]
+        self.duration = l[4]
             
     @staticmethod
     def match(l):
-        return len(l) == 5 and l[0] != 'EBLINK'
+        return len(l) == 5 and l[0] == 'EBLINK'
 
 
 class Fixation(Event):
@@ -74,6 +75,7 @@ class Fixation(Event):
 
     def __init__(self, l):
         self.assert_numeric(l, range(2,8))
+        assert Fixation.match(l)
         self.x = l[5]
         self.y = l[6]
         self.pupil_size = l[7]
@@ -103,6 +105,7 @@ class Sample(Event):
     def __init__(self, l):
 
         self.assert_numeric(l, [0])
+        assert Sample.match(l)
         self.t = l[0]
         if l[1] == '.':
             self.x = np.nan
@@ -134,6 +137,7 @@ class Saccade(Event):
 
     def __init__(self, l):
 
+        assert Saccade.match(l)
         if len(l) == 11:
             self.assert_numeric(l, [2,3,5,6,7,8])
             self.sx = l[5]
@@ -157,10 +161,11 @@ class Saccade(Event):
 
 
 def event(l, cls):
-
     try:
         return cls(l)
     except TypeError:
+        pass
+    except AssertionError:
         pass
     except Exception as e:
         warnings.warn(

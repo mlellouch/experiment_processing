@@ -35,8 +35,5 @@ class NewDataParsing(unittest.TestCase):
         assert len(dm.trialid) == 4
 
 
-
-
-
 if __name__ == '__main__':
     unittest.main()

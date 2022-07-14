@@ -306,7 +306,7 @@ class EyeLinkParser(object):
             warnings.warn(
                 u'Trial ended while phase "%s" was still ongoing' \
                 % self.current_phase)
-            self.end_phase(l)
+            # self.end_phase(l)
         self.on_end_trial()
         return self.trialdm
 
@@ -407,7 +407,6 @@ class EyeLinkParser(object):
         self.ytrace.append(s.y)
 
     def parse_fixation(self, f):
-
         self.fixxlist.append(f.x)
         self.fixylist.append(f.y)
         self.fixstlist.append(f.st)
@@ -476,7 +475,6 @@ class EyeLinkParser(object):
         return False
 
     def is_message(self, line):
-
         return line.startswith(u'MSG')
 
     def split(self, line):
