@@ -248,6 +248,7 @@ class EyeLinkParser(object):
         self.on_start_file()
         ntrial = 0
         self._linestack = []
+        total_size = os.stat(path).st_size
         with open(path, encoding=self._asc_encoding) as f:
             for line in self.stacked_file(f):
                 # Only messages can be start-trial messages, so performance we
