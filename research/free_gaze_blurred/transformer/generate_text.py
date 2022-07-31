@@ -27,14 +27,6 @@ def run():
     a = 1
 
 
-    #is_saccade_df = parser.sample_df[parser.sample_df['is_saccade'] == True]
-    #is_saccade_data = is_saccade_df.groupby('image_index')[['is_saccade']].count()
-    #print(is_saccade_data)
-
-    #sns.set_style('darkgrid')
-    #sns.barplot(x="image_index", y="num_of_saccades", data='is_saccade_data')
-    #mpl.pyplot.show()
-
 
 
 
