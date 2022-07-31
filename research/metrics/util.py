@@ -1,5 +1,8 @@
+import os
+import csv
 import pandas as pd
 import numpy as np
+import pathlib
 from eyelinkparser._eyelinkplusparser import EyeLinkPlusParser
 
 def add_sample_state(parser: EyeLinkPlusParser):
@@ -77,6 +80,32 @@ def add_image_aligned_position(parser: EyeLinkPlusParser):
         samples.loc[samples['image_index'] == index, 'image_y'] = new_y
 
     parser.sample_df = samples
+
+
+
+
+def subject_to_acuity(subject):
+    current_path = pathlib.Path(__file__).parent.parent.parent.joinpath('metadata.csv')
+    with open(str(current_path), 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row['name'] in subject:
+                return row['logMAR']
+
+    return 1
+
+
+def get_all_experiments(experiment_name):
+    """
+    a generator of all experiements of a single case
+    """
+
+    experiment_name += '.asc'
+    current_path = pathlib.Path(__file__).parent.resolve()
+    experiments_path = current_path.parent.parent.joinpath(pathlib.Path('parsed_outputs')).joinpath(pathlib.Path('normal_experiments'))
+    for subject in experiments_path.iterdir():
+        acuity = subject_to_acuity(str(subject))
+        yield acuity, str(subject.joinpath(experiment_name))
 
 
 
