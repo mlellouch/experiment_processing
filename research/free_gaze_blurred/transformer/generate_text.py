@@ -37,6 +37,7 @@ def run():
         elif diff < 0:
             sample_df2 = sample_df2.loc[0: diff]
         distances = {}
+        # calculates list of distances for each pair of equal index entries
         for index in range(sample_df1.shape[0]):
             if sample_df1.loc[index, 'is_fixation'] and sample_df2.loc[index, 'is_fixation']:
                 point1 = np.array((sample_df1.loc[index, 'image_x'], sample_df1.loc[index, 'image_y']))
