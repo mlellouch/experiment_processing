@@ -4,8 +4,8 @@ from eyelinkparser import EyeLinkPlusParser
 from research.metrics import util
 import os
 
-if __name__ == '__main__':
-    absolute_path = os.path.abspath('../parsed_outputs/normal_experiments/313547341_left_2022_06_19_16_47/shapes.asc')
+def load_file(filepath):
+    absolute_path = os.path.abspath(filepath)
     parser = parse_file(
         parser=EyeLinkPlusParser,
         filepath=absolute_path,  # Folder with .asc files
@@ -18,4 +18,11 @@ if __name__ == '__main__':
 
     dm = parser.dm
     util.add_sample_state(parser)
-    a = 1
+    util.add_fixation_order(parser)
+    return parser
+
+
+if __name__ == '__main__':
+    for acuity, experiment in util.get_all_experiments('shapes'):
+        current_data = load_file(experiment)
+
