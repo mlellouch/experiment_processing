@@ -82,6 +82,36 @@ def add_image_aligned_position(parser: EyeLinkPlusParser):
     parser.sample_df = samples
 
 
+def add_image_to_events_data(parser: EyeLinkPlusParser):
+
+    def add_image_to_event_data(images_df: pd.DataFrame, events_df: pd.DataFrame):
+        image_index = 0
+        new_column = []
+        for event in events_df.iloc:
+            if image_index >= len(images_df):
+                new_column.append(-1)
+                continue
+
+            while not images_df.iloc[image_index]['start time'] <= event['start time'] < images_df.iloc[image_index]['end time']:
+                image_index += 1
+                if image_index >= len(images_df):
+                    break
+
+            if image_index >= len(images_df):
+                new_column.append(-1)
+                continue
+
+            new_column.append(image_index)
+
+        return new_column
+
+    blinks = add_image_to_event_data(parser.images_df, parser.blinks_df)
+    blinks_df = parser.blinks_df.assign(image_index=blinks)
+    parser.blinks_df = blinks_df
+
+    saccades = add_image_to_event_data(parser.images_df, parser.saccades_df)
+    saccades_df = parser.saccades_df.assign(image_index=saccades)
+    parser.saccades_df = saccades_df
 
 
 def subject_to_acuity(subject):
