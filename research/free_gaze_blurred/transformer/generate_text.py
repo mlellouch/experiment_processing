@@ -29,6 +29,8 @@ def run():
     util.add_image_aligned_position(parser)
     a = 1
 
+    print(parser.fixations_df)
+
     def fixation_overlap(sample_df1, sample_df2, radius):
         # make equal length
         diff = sample_df1.shape[0] - sample_df2.shape[1]
@@ -45,6 +47,17 @@ def run():
                 distances[index] = calc_dist(point1, point2)
             else:
                 distances[index] = None
+
+    def cross_recurrence(sample_df1, sample_df2, radius):
+        fixations1 = {}
+        for index, row in sample_df1.iterrow():
+
+
+        diff = sample_df1.shape[0] - sample_df2.shape[1]
+        if diff > 0:
+            sample_df1 = sample_df1.loc[0: -diff]
+        elif diff < 0:
+            sample_df2 = sample_df2.loc[0: diff]
 
     def calc_dist(point1, point2):
         return np.linalg.norm(point1 - point2)
