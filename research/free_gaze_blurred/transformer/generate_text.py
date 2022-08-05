@@ -6,7 +6,7 @@ import os
 
 
 def run():
-    file_path = os.path.join('../../../parsed_outputs/FGB/FGB_2022_07_04_19_19.asc')
+    file_path = os.path.join('../../../outputs/parsed_outputs/FGB/FGB_2022_08_04_19_32.asc')
     parser = parse_file(
         parser=EyeLinkPlusParser,
         filepath=file_path,  # Folder with .asc files
@@ -22,8 +22,15 @@ def run():
     util.add_image_order(parser)
     util.add_image_aligned_position(parser)
     util.add_image_to_events_data(parser)
-    a = 1
+    return parser
 
 if __name__ == '__main__':
-    run()
+    parser = run()
+    output_path = '../../../outputs/preprocessed_outputs/case2'
+    parser.fixations_df.to_csv(os.path.join(output_path, 'fixations.csv'))
+    parser.sample_df.to_csv(os.path.join(output_path, 'samples.csv'))
+    parser.blinks_df.to_csv(os.path.join(output_path, 'blinks.csv'))
+    parser.saccades_df.to_csv(os.path.join(output_path, 'saccades_.csv'))
+
+
 

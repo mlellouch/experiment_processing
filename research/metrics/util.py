@@ -62,6 +62,14 @@ def add_image_order(parser: EyeLinkPlusParser):
     parser.sample_df = samples
 
 
+def add_image_blur(parser: EyeLinkPlusParser):
+    # TODO
+    pass
+
+def add_saccade_speed(parser: EyeLinkPlusParser):
+    # TODO
+    pass
+
 def add_image_aligned_position(parser: EyeLinkPlusParser):
     zeros = np.zeros(len(parser.sample_df), dtype=float)
     samples = parser.sample_df.assign(
@@ -112,6 +120,10 @@ def add_image_to_events_data(parser: EyeLinkPlusParser):
     saccades = add_image_to_event_data(parser.images_df, parser.saccades_df)
     saccades_df = parser.saccades_df.assign(image_index=saccades)
     parser.saccades_df = saccades_df
+
+    fixations = add_image_to_event_data(parser.images_df, parser.fixations_df)
+    fixations_df = parser.fixations_df.assign(image_index=fixations)
+    parser.fixations_df = fixations_df
 
 
 def subject_to_acuity(subject):
