@@ -2,17 +2,87 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-# import seaborn as sns
+import seaborn as sns
 from scipy.spatial.distance import cdist
 
 
 def print_results():
-    crm = cross_recurrence_analysis("fixations_test.csv", "fixations_test.csv", 50)
-    print(f"crm: {crm}")
-    rec = calc_cross_recurrence(crm)
-    print(f"REC = {rec}")
-    det = calc_determinism(crm, 2, by_length=False, sec_diagonal=True)
-    print(f"DET = {det}")
+    avg_results_by_blur, results = calc_results()
+    print(f"results: {results}")
+    print(f"avg_results_by_blur: {avg_results_by_blur}")
+
+    # linear distance heat map
+    matrix = get_measurement_results_matrix("linear distance", avg_results_by_blur)
+    ax = sns.heatmap(matrix, linewidth=0.5)
+    plt.show()
+
+    # cross recurrence
+    matrix = get_measurement_results_matrix("cross recurrence", avg_results_by_blur)
+    ax = sns.heatmap(matrix, linewidth=0.5)
+    plt.show()
+
+    # determinism
+    matrix = get_measurement_results_matrix("determinism", avg_results_by_blur)
+    ax = sns.heatmap(matrix, linewidth=0.5)
+    plt.show()
+
+    # laminarity
+    matrix = get_measurement_results_matrix("laminarity", avg_results_by_blur)
+    ax = sns.heatmap(matrix, linewidth=0.5)
+    plt.show()
+
+    # center of recurrence mas
+    matrix = get_measurement_results_matrix("CORM", avg_results_by_blur)
+    ax = sns.heatmap(matrix, linewidth=0.5)
+    plt.show()
+
+    # fixation overlap
+    matrix = get_measurement_results_matrix("fixation overlap", avg_results_by_blur)
+    ax = sns.heatmap(matrix, linewidth=0.5)
+    plt.show()
+
+
+def get_measurement_results_matrix(measurement, avg_results_by_blur):
+    return [[avg_results_by_blur[i][j][1][measurement]
+            for i in range(len(avg_results_by_blur))]
+            for j in range(len(avg_results_by_blur))]
+
+
+def calc_results():
+    df = pd.read_csv('fixations.csv')
+    images_df = pd.read_csv('images.csv')
+    # init scanpaths list
+    sps = group_by_image(df)
+    # init matrix of measurements results for each 2 scanpaths
+    results = np.zeros(len(sps), len(sps))
+    # init a matrix of measurements results average values for each 2 scanpaths of a specific blur range
+    avg_results_by_blur = np.array([[(0, {"linear distance": 0,
+                                          "cross recurrence": 0,
+                                          "determinism": 0,
+                                          "laminarity": 0,
+                                          "CORM": 0,
+                                          "fixation overlap": 0}) for _ in range(20)] for _ in range(20)])
+    # calculate results and average results
+    for i in range(len(sps)):
+        for j in range(len(sps)):
+            if i != j:
+                # TODO: figure out how to calculate distance with visual angle (1.9 and 3.5)
+                crm = cross_recurrence_analysis(sps[i], sps[j], 1.9)
+                overlap_percentage, _, _ = fixation_overlap(sps[i], sps[j], 3.5)
+                measures = {"linear distance": calc_linear_distance(sps[i], sps[j]),
+                            "cross recurrence": calc_cross_recurrence(crm),
+                            "determinism": calc_determinism(crm, 2),
+                            "laminarity": calc_laminarity(crm, 2),
+                            "CORM": calc_corm(crm),
+                            "fixation overlap": overlap_percentage}
+                results[i][j] = measures
+                blur_idx1 = int(images_df.loc[sps[i].loc[0, 'image_index'], 'blur level'])
+                blur_idx2 = int(images_df.loc[sps[j].loc[0, 'image_index'], 'blur level'])
+                count, values = avg_results_by_blur[blur_idx1][blur_idx2]
+                for key, value in measures:
+                    values[key] = ((values[key] * count) + value) / (count + 1)
+                avg_results_by_blur[i][j] = (count + 1, values)
+    return avg_results_by_blur, results
 
 
 def group_by_image(df):
@@ -64,18 +134,22 @@ def fixation_overlap(sample_df1, sample_df2, radius):
     distances = {}
     dist_sum = 0
     count = 0
+    overlaps = 0
     # calculates list of distances for each pair of equal index entries
     for index in range(sample_df1.shape[0]):
         if sample_df1.loc[index, 'is_fixation'] and sample_df2.loc[index, 'is_fixation']:
             point1 = np.array((sample_df1.loc[index, 'image_x'], sample_df1.loc[index, 'image_y']))
             point2 = np.array((sample_df2.loc[index, 'image_x'], sample_df2.loc[index, 'image_y']))
             distances[index] = calc_dist(point1, point2)
+            if distances[index] <= radius:
+                overlaps += 1
             dist_sum += distances[index]
-            count +=1
+            count += 1
         else:
             distances[index] = None
     similarity = dist_sum / count
-    return similarity, distances
+    percentage = overlaps / count
+    return percentage, similarity, distances
 
 
 def calc_linear_distance(fixations_df1, fixations_df2, normalize=True):
@@ -125,8 +199,8 @@ def calc_corm(crm):
     acc = 0
     for i in range(n):
         for j in range(n):
-            acc += (j-i) * crm[i][j]
-    return 100 * (acc / (n-1)*c)
+            acc += (j - i) * crm[i][j]
+    return 100 * (acc / (n - 1) * c)
 
 
 def calc_diagonal_lines(matrix, length):
@@ -174,9 +248,7 @@ def calc_ones(vector, length):
     return count, count_length
 
 
-def cross_recurrence_analysis(sample_file1, sample_file2, radius):
-    sample_df1 = pd.read_csv(sample_file1)
-    sample_df2 = pd.read_csv(sample_file2)
+def cross_recurrence_analysis(sample_df1, sample_df2, radius):
     fixations1 = init_fixation_list(sample_df1)
     fixations2 = init_fixation_list(sample_df2)
 
@@ -200,14 +272,23 @@ def init_fixation_list(fixation_df):
     return fixations
 
 
+def resample_fixations(images_df, fixations_df):
+    ret_df = fixations_df.copy()
+    for index, _ in ret_df.iterrows():
+        fixation_start_time = fixations_df.loc[index, 'start time']
+        image_start_time = images_df.loc[ret_df.loc[index, 'image_index'], 'start time']
+        ret_df.loc[index, 'start time'] = fixation_start_time - image_start_time
+    return ret_df
+
+
 def calc_dist(point1, point2):
     return np.linalg.norm(point1 - point2)
 
 
 def testing():
-    matrix = np.array([[1,2,3],
-                      [4,5,6]])
-    print(len(matrix))
+    matrix = np.array([[1, 2, 3],
+                       [4, 5, 6]])
+    print(int(1.9))
 
 
 if __name__ == '__main__':
