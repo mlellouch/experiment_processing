@@ -56,32 +56,58 @@ def add_image_order(parser: EyeLinkPlusParser):
     samples = parser.sample_df.assign(
         image_index = zeros
     )
-    for index, image in enumerate(parser.images_df.iloc):
+    for index, image in parser.images_df.iterrows():
         samples.loc[(samples['time'] >= image['start time']) & (samples['time'] <= image['end time']), 'image_index'] = index
 
     parser.sample_df = samples
 
 
-def add_image_blur(parser: EyeLinkPlusParser):
-    # TODO
-    pass
+    zeros = np.zeros(len(parser.fixations_df), dtype=int)
+    fixations = parser.fixations_df.assign(
+        image_index = zeros
+    )
+    for index, image in parser.images_df.iterrows():
+        fixations.loc[(fixations['start time'] >= image['start time']) & (fixations['end time'] <= image['end time']), 'image_index'] = index
 
-def add_saccade_speed(parser: EyeLinkPlusParser):
-    # TODO
-    pass
+    parser.fixations_df = fixations
+
+
+def add_image_blur(parser: EyeLinkPlusParser):
+    blur = []
+    for idx, row in parser.images_df.iterrows():
+        parts = row.path.split('_')
+        if len(parts) <= 1:
+            blur.append(0)
+
+        else:
+            blur.append(float(parts[1][:parts[1].rfind('.')]))
+
+    parser.images_df = parser.images_df.assign(
+        blur=np.array(blur)
+    )
+
+
+def add_saccade_description(parser: EyeLinkPlusParser):
+    s = parser.saccades_df
+    start_points = np.array([s['start x'], s['start y']]).T
+    end_points = np.array([s['end x'], s['end y']]).T
+    distance = np.linalg.norm(end_points - start_points, axis=1)
+    speed = distance / (s['end time'] - s['start time'])
+    parser.saccades_df = parser.saccades_df.assign(distance=distance, speed=speed)
+
 
 def add_image_aligned_position(parser: EyeLinkPlusParser):
     zeros = np.zeros(len(parser.sample_df), dtype=float)
     samples = parser.sample_df.assign(
-        image_x = zeros,
-        image_y = zeros
+        image_x=zeros,
+        image_y=zeros
     )
 
     def align_loc(image, x, y):
         image_start = image['location'][0] - (image['size'][0]//2), image['location'][1] - (image['size'][1]//2)
         return x - image_start[0], y - image_start[1]
 
-    for index, image in enumerate(parser.images_df.iloc):
+    for index, image in parser.images_df.iterrows():
         image_samples = samples.loc[samples['image_index'] == index]['x'], samples.loc[samples['image_index'] == index]['y']
         new_x, new_y = align_loc(image, image_samples[0], image_samples[1])
         samples.loc[samples['image_index'] == index, 'image_x'] = new_x
@@ -89,41 +115,71 @@ def add_image_aligned_position(parser: EyeLinkPlusParser):
 
     parser.sample_df = samples
 
+    zeros = np.zeros(len(parser.fixations_df), dtype=float)
+    fixations = parser.fixations_df.assign(
+        image_x=zeros,
+        image_y=zeros
+    )
+    for index, image in parser.images_df.iterrows():
+        image_fixations = fixations.loc[fixations['image_index'] == index]['x'], fixations.loc[fixations['image_index'] == index]['y']
+        new_x, new_y = align_loc(image, image_fixations[0], image_fixations[1])
+        fixations.loc[fixations['image_index'] == index, 'image_x'] = new_x
+        fixations.loc[fixations['image_index'] == index, 'image_y'] = new_y
 
-def add_image_to_events_data(parser: EyeLinkPlusParser):
+    parser.fixations_df = fixations
+
+
+def add_image_to_events_data(parser: EyeLinkPlusParser, add_image_blur=False):
 
     def add_image_to_event_data(images_df: pd.DataFrame, events_df: pd.DataFrame):
         image_index = 0
-        new_column = []
-        for event in events_df.iloc:
-            if image_index >= len(images_df):
-                new_column.append(-1)
-                continue
+        new_image_column = []
+        new_blur_column = []
 
-            while not images_df.iloc[image_index]['start time'] <= event['start time'] < images_df.iloc[image_index]['end time']:
-                image_index += 1
+        for i, event in events_df.iterrows():
+            found = False
+            while True:
                 if image_index >= len(images_df):
+                    # we finished going through all images
                     break
 
-            if image_index >= len(images_df):
-                new_column.append(-1)
-                continue
+                if images_df.iloc[image_index]['start time'] <= event['start time'] < images_df.iloc[image_index]['end time']:
+                    found = True
+                    break
 
-            new_column.append(image_index)
+                if event['start time'] <= images_df.iloc[image_index]['start time']: # if not in current image, but is before next one:
+                    # then this event is not in any image
+                    break
 
-        return new_column
+                # this event happens after current image. hence we advance the image counter
+                image_index += 1
 
-    blinks = add_image_to_event_data(parser.images_df, parser.blinks_df)
-    blinks_df = parser.blinks_df.assign(image_index=blinks)
+            new_image_column.append(image_index) if found else new_image_column.append(0)
+            if add_image_blur:
+                new_blur_column.append(parser.images_df.loc[image_index]['blur']) if found else new_blur_column.append(0)
+
+
+        return new_image_column, new_blur_column
+
+    blinks, blur = add_image_to_event_data(parser.images_df, parser.blinks_df)
+    blinks_df = parser.blinks_df.assign(image_index=blinks, blur=blur)
     parser.blinks_df = blinks_df
 
-    saccades = add_image_to_event_data(parser.images_df, parser.saccades_df)
-    saccades_df = parser.saccades_df.assign(image_index=saccades)
+    saccades, blur = add_image_to_event_data(parser.images_df, parser.saccades_df)
+    saccades_df = parser.saccades_df.assign(image_index=saccades, blur=blur)
     parser.saccades_df = saccades_df
 
-    fixations = add_image_to_event_data(parser.images_df, parser.fixations_df)
-    fixations_df = parser.fixations_df.assign(image_index=fixations)
+    fixations, blur = add_image_to_event_data(parser.images_df, parser.fixations_df)
+    fixations_df = parser.fixations_df.assign(image_index=fixations, blur=blur)
     parser.fixations_df = fixations_df
+
+    # add blur to samples
+    zeros = np.zeros(len(parser.sample_df))
+    samples = parser.sample_df.assign(blur=zeros)
+    for idx, image in parser.images_df.iterrows():
+        samples.loc[samples['image_index'] == idx, 'blur'] = parser.images_df.loc[idx]['blur']
+
+    parser.sample_df = samples
 
 
 def subject_to_acuity(subject):

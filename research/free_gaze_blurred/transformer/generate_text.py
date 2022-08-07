@@ -17,11 +17,13 @@ def run():
         )
     )
 
+    util.add_image_blur(parser)
+    util.add_saccade_description(parser)
     util.add_sample_state(parser)
     util.add_fixation_order(parser)
     util.add_image_order(parser)
     util.add_image_aligned_position(parser)
-    util.add_image_to_events_data(parser)
+    util.add_image_to_events_data(parser, add_image_blur=True)
     return parser
 
 if __name__ == '__main__':
@@ -30,7 +32,8 @@ if __name__ == '__main__':
     parser.fixations_df.to_csv(os.path.join(output_path, 'fixations.csv'))
     parser.sample_df.to_csv(os.path.join(output_path, 'samples.csv'))
     parser.blinks_df.to_csv(os.path.join(output_path, 'blinks.csv'))
-    parser.saccades_df.to_csv(os.path.join(output_path, 'saccades_.csv'))
+    parser.saccades_df.to_csv(os.path.join(output_path, 'saccades.csv'))
+    parser.images_df.to_csv(os.path.join(output_path, 'images.csv'))
 
 
 
