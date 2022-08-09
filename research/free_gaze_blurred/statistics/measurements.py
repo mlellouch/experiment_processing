@@ -1,4 +1,6 @@
 # Import Python Libraries
+import time
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -7,7 +9,10 @@ from scipy.spatial.distance import cdist
 
 
 def print_results():
+    start_time = time.time()
     avg_results_by_blur, results = calc_results()
+    end_time = time.time()
+    time_convert(end_time - start_time)
     print(f"results: {results}")
     print(f"avg_results_by_blur: {avg_results_by_blur}")
 
@@ -42,6 +47,14 @@ def print_results():
     plt.show()
 
 
+def time_convert(sec):
+    mins = sec // 60
+    sec = sec % 60
+    hours = mins // 60
+    mins = mins % 60
+    print("Time Lapsed = {0}:{1}:{2}".format(int(hours), int(mins), sec))
+
+
 def get_measurement_results_matrix(measurement, avg_results_by_blur):
     return [[avg_results_by_blur[i][j][1][measurement]
             for i in range(len(avg_results_by_blur))]
@@ -49,12 +62,14 @@ def get_measurement_results_matrix(measurement, avg_results_by_blur):
 
 
 def calc_results():
-    df = pd.read_csv('fixations.csv')
-    images_df = pd.read_csv('images.csv')
+    fixations_df = pd.read_csv('C:\\Users\\levil\\OneDrive\\שולחן העבודה\\experiment_processing\\experiment_processing\\research\\free_gaze_blurred\statistics\\fixations.csv')
+    images_df = pd.read_csv('C:\\Users\\levil\\OneDrive\\שולחן העבודה\\experiment_processing\\experiment_processing\\research\\free_gaze_blurred\\statistics\\images.csv')
+    samples_df = pd.read_csv('C:\\Users\\levil\\OneDrive\\שולחן העבודה\\experiment_processing\\experiment_processing\\research\\free_gaze_blurred\\statistics\\samples.csv')
     # init scanpaths list
-    sps = group_by_image(df)
+    fixations_sps = group_by_image(fixations_df)
+    samples_sps = group_by_image(samples_df)
     # init matrix of measurements results for each 2 scanpaths
-    results = np.zeros(len(sps), len(sps))
+    results = np.array([[{} for _ in range(len(fixations_sps))] for _ in range((len(fixations_sps)))])
     # init a matrix of measurements results average values for each 2 scanpaths of a specific blur range
     avg_results_by_blur = np.array([[(0, {"linear distance": 0,
                                           "cross recurrence": 0,
@@ -63,25 +78,26 @@ def calc_results():
                                           "CORM": 0,
                                           "fixation overlap": 0}) for _ in range(20)] for _ in range(20)])
     # calculate results and average results
-    for i in range(len(sps)):
-        for j in range(len(sps)):
-            if i != j:
+    for i in range(len(fixations_sps)):
+        for j in range(len(fixations_sps)):
+            if i != j and fixations_sps[i].shape[0] > 0 and fixations_sps[j].shape[0] > 0:
                 # TODO: figure out how to calculate distance with visual angle (1.9 and 3.5)
-                crm = cross_recurrence_analysis(sps[i], sps[j], 1.9)
-                overlap_percentage, _, _ = fixation_overlap(sps[i], sps[j], 3.5)
-                measures = {"linear distance": calc_linear_distance(sps[i], sps[j]),
+                crm = cross_recurrence_analysis(fixations_sps[i], fixations_sps[j], 1.9)
+                overlap_percentage, _, _ = fixation_overlap(samples_sps[i], samples_sps[j], 3.5)
+                measures = {"linear distance": calc_linear_distance(fixations_sps[i], fixations_sps[j]),
                             "cross recurrence": calc_cross_recurrence(crm),
                             "determinism": calc_determinism(crm, 2),
                             "laminarity": calc_laminarity(crm, 2),
                             "CORM": calc_corm(crm),
                             "fixation overlap": overlap_percentage}
                 results[i][j] = measures
-                blur_idx1 = int(images_df.loc[sps[i].loc[0, 'image_index'], 'blur level'])
-                blur_idx2 = int(images_df.loc[sps[j].loc[0, 'image_index'], 'blur level'])
+                blur_idx1 = int(images_df.loc[fixations_sps[i].loc[0, 'image_index'], 'blur'])
+                blur_idx2 = int(images_df.loc[fixations_sps[j].loc[0, 'image_index'], 'blur'])
                 count, values = avg_results_by_blur[blur_idx1][blur_idx2]
-                for key, value in measures:
+                for key in measures:
+                    value = measures[key]
                     values[key] = ((values[key] * count) + value) / (count + 1)
-                avg_results_by_blur[i][j] = (count + 1, values)
+                avg_results_by_blur[blur_idx1][blur_idx2] = (count + 1, values)
     return avg_results_by_blur, results
 
 
@@ -89,22 +105,16 @@ def group_by_image(df):
     sps = []
     num = (1 + df['image_index'].max())
     for i in range(num):
-        sps.append(df[df['image_index'] == i])
+        sp = df[df['image_index'] == i]
+        sp.reset_index(drop=True, inplace=True)
+        sps.append(sp)
     return sps
 
 
 def blinks_per_image_blur(blinks_df, images_df):
-    # add blur_level column to images_df
-    for index, image_row in images_df.iterrows():
-        path = image_row['path']
-        if len(path.split('_')) > 1:
-            images_df.loc[index, 'blur_level'] = path.split('_')[1][0: -4]
-        else:
-            images_df.loc[index, 'blur_level'] = 0
-    images_df = images_df.astype({"blur_level": float}, errors='raise')
     # add image_blur column to blinks_df
     for index, row in blinks_df.iterrows():
-        blinks_df.loc[index, 'image_blur'] = images_df.loc[row['image_index'], 'blur_level']
+        blinks_df.loc[index, 'image_blur'] = images_df.loc[row['image_index'], 'blur']
     blinks_df = blinks_df.astype({"image_index": int}, errors='raise')
     # calc blinks per blur level
     blinks_per_blur = {}
@@ -116,7 +126,7 @@ def blinks_per_image_blur(blinks_df, images_df):
     # normalize 0.0 blur level
     zero_blur_count = 0
     for index, row in images_df.iterrows():
-        if row['blur_level'] == 0.0:
+        if row['blur'] == 0.0:
             zero_blur_count += 1
     blinks_per_blur[0.0] = blinks_per_blur[0.0] / zero_blur_count
     # scatter plot results
@@ -128,25 +138,26 @@ def fixation_overlap(sample_df1, sample_df2, radius):
     # make equal length
     diff = sample_df1.shape[0] - sample_df2.shape[0]
     if diff > 0:
-        sample_df1 = sample_df1.loc[0: -diff]
+        sample_df1 = sample_df1.loc[0: sample_df2.shape[0]-1]
     elif diff < 0:
-        sample_df2 = sample_df2.loc[0: diff]
+        sample_df2 = sample_df2.loc[0: sample_df1.shape[0]-1]
     distances = {}
     dist_sum = 0
     count = 0
     overlaps = 0
     # calculates list of distances for each pair of equal index entries
-    for index in range(sample_df1.shape[0]):
-        if sample_df1.loc[index, 'is_fixation'] and sample_df2.loc[index, 'is_fixation']:
-            point1 = np.array((sample_df1.loc[index, 'image_x'], sample_df1.loc[index, 'image_y']))
-            point2 = np.array((sample_df2.loc[index, 'image_x'], sample_df2.loc[index, 'image_y']))
-            distances[index] = calc_dist(point1, point2)
-            if distances[index] <= radius:
+    for index1, row in sample_df1.iterrows():
+        if sample_df1.loc[index1, 'is_fixation'] and sample_df2.loc[index1, 'is_fixation']:
+            point1 = np.array((sample_df1.loc[index1, 'image_x'], sample_df1.loc[index1, 'image_y']))
+            point2 = np.array((sample_df2.loc[index1, 'image_x'], sample_df2.loc[index1, 'image_y']))
+            distances[index1] = calc_dist(point1, point2)
+            if distances[index1] <= radius:
                 overlaps += 1
-            dist_sum += distances[index]
+            dist_sum += distances[index1]
             count += 1
         else:
-            distances[index] = None
+            distances[index1] = None
+    count = count if count != 0 else 1
     similarity = dist_sum / count
     percentage = overlaps / count
     return percentage, similarity, distances
@@ -176,6 +187,7 @@ def calc_determinism(crm, length, by_length=True, sec_diagonal=True):
         count += count2
         count_length += count_length2
     c = crm.sum()
+    c = c if c != 0 else 1
     return 100 * (count_length / c) if by_length else 100 * (count / c)
 
 
@@ -190,6 +202,7 @@ def calc_laminarity(crm, length, by_length=True, sec_diagonal=True):
         count += count2
         count_length += count_length2
     c = crm.sum()
+    c = c if c != 0 else 1
     return 100 * (count_length / c) if by_length else 100 * (count / c)
 
 
@@ -200,7 +213,9 @@ def calc_corm(crm):
     for i in range(n):
         for j in range(n):
             acc += (j - i) * crm[i][j]
-    return 100 * (acc / (n - 1) * c)
+    div = (n - 1) * c
+    div = div if div != 0 else 1
+    return 100 * (acc / div)
 
 
 def calc_diagonal_lines(matrix, length):
@@ -225,7 +240,7 @@ def calc_horizontal_lines(matrix, length):
     count = 0
     count_length = 0
     for i in range(n):
-        horizontal = matrix[1]
+        horizontal = matrix[i]
         temp_count, temp_count_length = calc_ones(horizontal, length)
         count += temp_count
         count_length += temp_count_length
@@ -266,8 +281,8 @@ def cross_recurrence_analysis(sample_df1, sample_df2, radius):
 
 def init_fixation_list(fixation_df):
     fixations = []
-    for index in range(fixation_df.shape[0]):
-        point = np.array((fixation_df.loc[index, 'x'], fixation_df.loc[index, 'y']))
+    for index, row in fixation_df.iterrows():
+        point = np.array((fixation_df.loc[index, 'image_x'], fixation_df.loc[index, 'image_y']))
         fixations.append(point)
     return fixations
 
@@ -286,12 +301,12 @@ def calc_dist(point1, point2):
 
 
 def testing():
-    matrix = np.array([[1, 2, 3],
-                       [4, 5, 6]])
+    matrix = np.zeros(181, 181)
     print(int(1.9))
 
 
 if __name__ == '__main__':
-    testing()
+    # testing()
+    print_results()
     # blinks_per_image()
     #
