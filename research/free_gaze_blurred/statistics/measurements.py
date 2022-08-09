@@ -57,16 +57,21 @@ def time_convert(sec):
 
 def get_measurement_results_matrix(measurement, avg_results_by_blur):
     return [[avg_results_by_blur[i][j][1][measurement]
-            for i in range(len(avg_results_by_blur))]
+             for i in range(len(avg_results_by_blur))]
             for j in range(len(avg_results_by_blur))]
 
 
 def calc_results():
-    fixations_df = pd.read_csv('C:\\Users\\levil\\OneDrive\\שולחן העבודה\\experiment_processing\\experiment_processing\\research\\free_gaze_blurred\statistics\\fixations.csv')
-    images_df = pd.read_csv('C:\\Users\\levil\\OneDrive\\שולחן העבודה\\experiment_processing\\experiment_processing\\research\\free_gaze_blurred\\statistics\\images.csv')
-    samples_df = pd.read_csv('C:\\Users\\levil\\OneDrive\\שולחן העבודה\\experiment_processing\\experiment_processing\\research\\free_gaze_blurred\\statistics\\samples.csv')
+    fixations_df = pd.read_csv(
+        'C:\\Users\\levil\\OneDrive\\שולחן העבודה\\experiment_processing\\experiment_processing\\research\\free_gaze_blurred\statistics\\fixations.csv')
+    images_df = pd.read_csv(
+        'C:\\Users\\levil\\OneDrive\\שולחן העבודה\\experiment_processing\\experiment_processing\\research\\free_gaze_blurred\\statistics\\images.csv')
+    samples_df = pd.read_csv(
+        'C:\\Users\\levil\\OneDrive\\שולחן העבודה\\experiment_processing\\experiment_processing\\research\\free_gaze_blurred\\statistics\\samples.csv')
     # init scanpaths list
-    fixations_sps = group_by_image(fixations_df)
+    fixations_sps_df = group_by_image(fixations_df)
+    fixations_sps = [init_fixation_list(sp) for sp in fixations_sps_df]
+
     samples_sps = group_by_image(samples_df)
     # init matrix of measurements results for each 2 scanpaths
     results = np.array([[{} for _ in range(len(fixations_sps))] for _ in range((len(fixations_sps)))])
@@ -80,19 +85,19 @@ def calc_results():
     # calculate results and average results
     for i in range(len(fixations_sps)):
         for j in range(len(fixations_sps)):
-            if i != j and fixations_sps[i].shape[0] > 0 and fixations_sps[j].shape[0] > 0:
+            if i != j and len(fixations_sps[i]) > 0 and len(fixations_sps[j]) > 0:
                 # TODO: figure out how to calculate distance with visual angle (1.9 and 3.5)
-                crm = cross_recurrence_analysis(fixations_sps[i], fixations_sps[j], 1.9)
-                overlap_percentage, _, _ = fixation_overlap(samples_sps[i], samples_sps[j], 3.5)
+                crm = cross_recurrence_analysis(fixations_sps[i], fixations_sps[j], 50)
+                # overlap_percentage, _, _ = fixation_overlap(samples_sps[i], samples_sps[j], 3.5)
                 measures = {"linear distance": calc_linear_distance(fixations_sps[i], fixations_sps[j]),
                             "cross recurrence": calc_cross_recurrence(crm),
                             "determinism": calc_determinism(crm, 2),
                             "laminarity": calc_laminarity(crm, 2),
                             "CORM": calc_corm(crm),
-                            "fixation overlap": overlap_percentage}
+                            "fixation overlap": 0}  # overlap_percentage}
                 results[i][j] = measures
-                blur_idx1 = int(images_df.loc[fixations_sps[i].loc[0, 'image_index'], 'blur'])
-                blur_idx2 = int(images_df.loc[fixations_sps[j].loc[0, 'image_index'], 'blur'])
+                blur_idx1 = int(images_df.loc[fixations_sps_df[i].loc[0, 'image_index'], 'blur'])
+                blur_idx2 = int(images_df.loc[fixations_sps_df[j].loc[0, 'image_index'], 'blur'])
                 count, values = avg_results_by_blur[blur_idx1][blur_idx2]
                 for key in measures:
                     value = measures[key]
@@ -138,9 +143,9 @@ def fixation_overlap(sample_df1, sample_df2, radius):
     # make equal length
     diff = sample_df1.shape[0] - sample_df2.shape[0]
     if diff > 0:
-        sample_df1 = sample_df1.loc[0: sample_df2.shape[0]-1]
+        sample_df1 = sample_df1.loc[0: sample_df2.shape[0] - 1]
     elif diff < 0:
-        sample_df2 = sample_df2.loc[0: sample_df1.shape[0]-1]
+        sample_df2 = sample_df2.loc[0: sample_df1.shape[0] - 1]
     distances = {}
     dist_sum = 0
     count = 0
@@ -163,9 +168,9 @@ def fixation_overlap(sample_df1, sample_df2, radius):
     return percentage, similarity, distances
 
 
-def calc_linear_distance(fixations_df1, fixations_df2, normalize=True):
-    fixations1 = init_fixation_list(fixations_df1)
-    fixations2 = init_fixation_list(fixations_df2)
+def calc_linear_distance(fixations1, fixations2, normalize=True):
+#    fixations1 = init_fixation_list(fixations_df1)
+#    fixations2 = init_fixation_list(fixations_df2)
     distances = cdist(fixations1, fixations2)
     d = distances.min(axis=0).sum() + distances.min(axis=1).sum()
     if normalize:
@@ -263,18 +268,19 @@ def calc_ones(vector, length):
     return count, count_length
 
 
-def cross_recurrence_analysis(sample_df1, sample_df2, radius):
-    fixations1 = init_fixation_list(sample_df1)
-    fixations2 = init_fixation_list(sample_df2)
-
+def cross_recurrence_analysis(fixations1, fixations2, radius):
+#    fixations1 = init_fixation_list(sample_df1)
+#    fixations2 = init_fixation_list(sample_df2)
+    fixations1_copy = fixations1.copy()
+    fixations2_copy = fixations2.copy()
     # truncate the longer list
-    del fixations1[len(fixations2):]
-    del fixations2[len(fixations1):]
+    del fixations1_copy[len(fixations2_copy):]
+    del fixations2_copy[len(fixations1_copy):]
 
-    distances = cdist(fixations1, fixations2)
-    crm = np.zeros((len(fixations1), len(fixations2)))
-    for i in range(len(fixations1)):
-        for j in range(len(fixations2)):
+    distances = cdist(fixations1_copy, fixations2_copy)
+    crm = np.zeros((len(fixations1_copy), len(fixations2_copy)))
+    for i in range(len(fixations1_copy)):
+        for j in range(len(fixations2_copy)):
             crm[i][j] = 1 if distances[i][j] <= radius else 0
     return crm
 
