@@ -3,7 +3,7 @@ from eyelinkparser import parse, defaulttraceprocessor, parse_file
 from eyelinkparser import EyeLinkPlusParser
 from research.metrics import util, fixation_analysis
 import os
-import cv2
+#import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
