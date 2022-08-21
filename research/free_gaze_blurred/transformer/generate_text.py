@@ -6,7 +6,7 @@ import os
 
 
 def run():
-    file_path = os.path.join('../../../outputs/parsed_outputs/FGBS/FGBS_2022_08_21_14_04.asc')
+    file_path = os.path.join('../../../outputs/parsed_outputs/FGB/FGB_2022_08_21_15_48_long_aligned.asc')
     parser = parse_file(
         parser=EyeLinkPlusParser,
         filepath=file_path,  # Folder with .asc files
@@ -28,7 +28,7 @@ def run():
 
 if __name__ == '__main__':
     parser = run()
-    output_path = '../../../outputs/preprocessed_outputs/FGBS/case3_aligned_blur'
+    output_path = '../../../outputs/preprocessed_outputs/FGB/case6_long_aligned'
     parser.fixations_df.to_csv(os.path.join(output_path, 'fixations.csv'))
     parser.sample_df.to_csv(os.path.join(output_path, 'samples.csv'))
     parser.blinks_df.to_csv(os.path.join(output_path, 'blinks.csv'))

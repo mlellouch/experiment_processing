@@ -69,35 +69,27 @@ def get_heatmap(xs, ys, sigma=30.0, ksize=91, image_size=1024):
     data = cv2.GaussianBlur(data,ksize=(ksize,ksize), sigmaX=sigma, sigmaY=sigma, borderType=cv2.BORDER_DEFAULT)
     return data
 
-def get_images_heatmap(events: pd.DataFrame, sigma=30.0, ksize=91, blur_ranges=[0.1, 5, 10, 15, 20], image_size=1024):
+def get_images_heatmap(events: pd.DataFrame, sigma=30.0, ksize=91, image_size=1024):
     """
     each event should have a blur field to it, and a x,y field
     """
 
-    bins = []
-    for i in range(len(blur_ranges) - 1):
-        bins.append(np.zeros((image_size, image_size), dtype=np.float64))
-
-    def get_bin(val):
-        for i in range(len(blur_ranges)-1):
-            if val < blur_ranges[i+1]:
-                return i
-
+    bins = {}
     from math import isnan
     for i, row, in events.iterrows():
         blur = row['blur']
         if blur == 0 or isnan(row['image_x']):
             continue
 
-        bin = get_bin(blur)
-        if bin is None:
-            continue
-        x, y= int(row['image_x']), int(row['image_y'])
-        if 0 <= x < image_size and 0 <= y < image_size:
-            bins[bin][y, x] += 1
+        if blur not in bins.keys():
+            bins[blur] = np.zeros((image_size, image_size), dtype=np.float64)
 
-    out = [cv2.GaussianBlur(i, ksize=(ksize,ksize), sigmaX=sigma, sigmaY=sigma, borderType=cv2.BORDER_DEFAULT)
-           for i in bins]
+        x, y = int(row['image_x']), int(row['image_y'])
+        if 0 <= x < image_size and 0 <= y < image_size:
+            bins[blur][y, x] += 1
+
+    out = {i: cv2.GaussianBlur(bins[i], ksize=(ksize,ksize), sigmaX=sigma, sigmaY=sigma, borderType=cv2.BORDER_DEFAULT)
+           for i in bins}
 
     return out
 
@@ -115,31 +107,24 @@ def add_sample_distance(samples:pd.DataFrame):
     return samples.assign(distance=distance)
 
 
-def get_distance_by_blur(samples, blur_ranges=[0.1, 5, 10, 15, 20], min_distance=0.0, max_distance=100.0):
-    bins = []
-    for i in range(len(blur_ranges) - 1):
-        bins.append([])
-
-    def get_bin(val):
-        for i in range(len(blur_ranges)-1):
-            if val < blur_ranges[i+1]:
-                return i
-
+def get_distance_by_blur(samples, min_distance=0.0, max_distance=100.0):
+    bins = {}
     from math import isnan
     for i, row, in samples.iterrows():
         blur = row['blur']
         distance = row['distance']
         if blur == 0 or isnan(row['image_x']) or (distance < min_distance or distance > max_distance):
             continue
-        bin = get_bin(blur)
-        if bin is None:
-            continue
-        bins[bin].append(distance)
+
+        if blur not in bins.keys():
+            bins[blur] = []
+
+        bins[blur].append(distance)
 
     return bins
 
 
-def run_all(path, output_path, blur_ranges=[0.1, 5, 10, 15, 20]):
+def run_all(path, output_path):
     saccades, images, fixations = pd.read_csv(str(path.joinpath('saccades.csv'))), pd.read_csv(
         str(path.joinpath('images.csv'))), pd.read_csv(str(path.joinpath('fixations.csv')))
     samples = pd.read_csv(str(path.joinpath('samples.csv')))
@@ -148,56 +133,57 @@ def run_all(path, output_path, blur_ranges=[0.1, 5, 10, 15, 20]):
 
     count, mean_distance, mean_speed, std_distance, std_speed = [add_metric_blur_data(i, images) for i in metrics]
 
-    count.plot(x='blur', y='count', kind='scatter')
+    count.boxplot(column='count', by='blur')
     plt.title('number of saccades over blur')
     plt.savefig(os.path.join(output_path, 'count'))
     plt.clf()
 
-    mean_speed.plot(x='blur', y='speed', kind='scatter')
+    mean_speed.boxplot(column='speed', by='blur')
     plt.title('average speed of saccades over blur')
     plt.savefig(os.path.join(output_path, 'avg_speed'))
     plt.clf()
 
-    mean_distance.plot(x='blur', y='distance', kind='scatter')
+    mean_distance.boxplot(column='distance', by='blur')
     plt.title('average distance of saccades over blur')
     plt.savefig(os.path.join(output_path, 'avg_distance'))
     plt.clf()
 
-    std_distance.plot(x='blur', y='distance', kind='scatter')
+    std_distance.boxplot(column='distance', by='blur')
     plt.title('std distance of saccades over blur')
     plt.savefig(os.path.join(output_path, 'std_distance'))
     plt.clf()
 
-    std_speed.plot(x='blur', y='speed', kind='scatter')
+    std_distance.boxplot(column='distance', by='blur')
     plt.title('std speed of saccades over blur')
     plt.savefig(os.path.join(output_path, 'std_speed'))
     plt.clf()
 
-    fixation_heatmaps = get_images_heatmap(fixations, sigma=30.0, blur_ranges=blur_ranges)
-    for idx in range(len(blur_ranges) - 1):
+    fixation_heatmaps = get_images_heatmap(fixations, sigma=30.0)
+    for idx in fixation_heatmaps:
         plt.imshow(fixation_heatmaps[idx], cmap='Reds')
-        plt.title(f'fixation heatmap for blurs {blur_ranges[idx]} to {blur_ranges[idx + 1]}')
-        plt.savefig(os.path.join(output_path, f'heatmap_{blur_ranges[idx + 1]}'))
+        plt.title(f'fixation heatmap for blur {idx}')
+        plt.savefig(os.path.join(output_path, f'heatmap_{idx}.png'))
         plt.clf()
 
-    sample_heatmaps = get_images_heatmap(samples, sigma=30.0, blur_ranges=blur_ranges)
-    for idx in range(len(blur_ranges) - 1):
+    sample_heatmaps = get_images_heatmap(samples, sigma=30.0)
+    for idx in sample_heatmaps:
         plt.imshow(sample_heatmaps[idx], cmap='Reds')
-        plt.title(f'sample heatmap for blurs {blur_ranges[idx]} to {blur_ranges[idx + 1]}')
-        plt.savefig(os.path.join(output_path, f'heatmap_sample_{blur_ranges[idx + 1]}'))
+        plt.title(f'sample heatmap for blur {idx}')
+        plt.savefig(os.path.join(output_path, f'heatmap_sample_{idx}.png'))
         plt.clf()
 
     samples = add_sample_distance(samples)
-    distances = get_distance_by_blur(samples, min_distance=10.0, max_distance=100, blur_ranges=blur_ranges)
+    distances = get_distance_by_blur(samples, min_distance=0.0, max_distance=100)
     num_bins = 100
 
-    for idx in range(len(distances)):
+    for idx in distances:
         n, bins, patches = plt.hist(distances[idx], num_bins, facecolor='blue', alpha=0.5)
-        plt.title(f'Distance histogram for blurs {blur_ranges[idx]} to {blur_ranges[idx + 1]}')
-        plt.savefig(os.path.join(output_path, f'distance_histograms_{blur_ranges[idx + 1]}'))
+        plt.ylim((0, 600))
+        plt.title(f'Distance histogram for blur {idx}')
+        plt.savefig(os.path.join(output_path, f'distance_histograms_{idx}.png'))
         plt.clf()
 
 
 if __name__ == '__main__':
-    path = Path('../../../outputs/preprocessed_outputs/FGBS/case3_aligned_blur')
-    run_all(path, './outputs/scenes_aligned', blur_ranges=[0.1, 10, 20, 30, 40, 50, 60, 70, 80])
+    path = Path('../../../outputs/preprocessed_outputs/FGB/case6_long_aligned')
+    run_all(path, './outputs/long_face_aligned')
