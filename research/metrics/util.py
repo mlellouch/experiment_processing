@@ -80,7 +80,10 @@ def add_image_blur(parser: EyeLinkPlusParser):
             blur.append(0)
 
         else:
-            blur.append(float(parts[1][:parts[1].rfind('.')]))
+            try:
+                blur.append(float(parts[-1][:parts[-1].rfind('.')]))
+            except ValueError:
+                blur.append(0)
 
     parser.images_df = parser.images_df.assign(
         blur=np.array(blur)

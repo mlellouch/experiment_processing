@@ -298,6 +298,7 @@ class EyeLinkParser(object):
             # improve performance don't even check.
             if self.is_message(line):
                 if self.is_end_trial(l):
+                    self.end_phase(l)
                     break
                 self.parse_variable(l)
             self.parse_phase(l)
@@ -470,6 +471,7 @@ class EyeLinkParser(object):
 
         # MSG	6740629 end_trial
         if self.match(l, u'MSG', int, (u'end_trial', u'stop_trial')):
+            self.end_phase(l)
             self.trialid = None
             return True
         return False
