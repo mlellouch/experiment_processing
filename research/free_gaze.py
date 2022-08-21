@@ -10,7 +10,7 @@ import numpy as np
 
 def run():
 
-    file_path = os.path.join('../parsed_outputs/normal_experiments/ofir_l_2022_06_26_16_54/freegaze.asc')
+    file_path = os.path.join('../outputs/parsed_outputs/normal_experiments/ofir_l_2022_06_26_16_54/freegaze.asc')
     parser = parse_file(
         parser=EyeLinkPlusParser,
         filepath=file_path,  # Folder with .asc files
