@@ -54,6 +54,12 @@ def get_blink_count(blinks_df):
     return count
 
 
+def get_pupil_size(samples_df):
+    g = samples_df.groupby(by='image_index')
+    avg = pd.DataFrame(g.mean(True)['pupil size'])
+    return avg
+
+
 def add_metric_blur_data(metric:pd.DataFrame, images):
     metric['blur'] = images['blur']
     metric = metric[metric['blur'] != 0]
@@ -106,7 +112,6 @@ def add_sample_distance(samples:pd.DataFrame):
     distance = np.linalg.norm(end - start, axis=1)
     return samples.assign(distance=distance)
 
-
 def get_distance_by_blur(samples, min_distance=0.0, max_distance=100.0):
     bins = {}
     from math import isnan
@@ -125,12 +130,20 @@ def get_distance_by_blur(samples, min_distance=0.0, max_distance=100.0):
 
 
 def run_all(path, output_path):
+    os.makedirs(output_path, exist_ok=True)
+
     saccades, images, fixations = pd.read_csv(str(path.joinpath('saccades.csv'))), pd.read_csv(
         str(path.joinpath('images.csv'))), pd.read_csv(str(path.joinpath('fixations.csv')))
     samples = pd.read_csv(str(path.joinpath('samples.csv')))
     # images = add_image_blur(images)
-    metrics = get_saccade_statistics(saccades)
 
+    pupils_sizes = add_metric_blur_data(get_pupil_size(samples), images)
+    pupils_sizes.boxplot(column='pupil size', by='blur')
+    plt.title('average pupil size over blur')
+    plt.savefig(os.path.join(output_path, 'pupil'))
+    plt.clf()
+
+    metrics = get_saccade_statistics(saccades)
     count, mean_distance, mean_speed, std_distance, std_speed = [add_metric_blur_data(i, images) for i in metrics]
 
     count.boxplot(column='count', by='blur')
@@ -153,7 +166,7 @@ def run_all(path, output_path):
     plt.savefig(os.path.join(output_path, 'std_distance'))
     plt.clf()
 
-    std_distance.boxplot(column='distance', by='blur')
+    std_speed.boxplot(column='speed', by='blur')
     plt.title('std speed of saccades over blur')
     plt.savefig(os.path.join(output_path, 'std_speed'))
     plt.clf()
@@ -185,5 +198,5 @@ def run_all(path, output_path):
 
 
 if __name__ == '__main__':
-    path = Path('../../../outputs/preprocessed_outputs/FGB/case6_long_aligned')
-    run_all(path, './outputs/long_face_aligned')
+    path = Path('../../../outputs/preprocessed_outputs/FGBS/lower_blur')
+    run_all(path, './outputs/FGBS_lower_blur')

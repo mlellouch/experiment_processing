@@ -33,43 +33,43 @@ def run(input_path, output_path):
     # linear distance heat map
     matrix1 = get_measurement_results_matrix("linear distance", avg_results_by_blur)
     plt.figure(figsize=(12, 12))
-    plt.title('Linear Distance (closest match to each point)')
     ax = sns.heatmap(matrix1, linewidth=1, square=False, annot=True, fmt=".1f", xticklabels=labels, yticklabels=labels)
+    ax.set_title('Linear Distance (closest match to each point)')
     plt.savefig(os.path.join(output_path, 'linear_distance.png'))
 
     # cross recurrence
     matrix2 = get_measurement_results_matrix("cross recurrence", avg_results_by_blur)
     plt.figure(figsize=(12, 12))
-    plt.title('Cross Recurrence (how many fixations from one scanpath are close enough to a fixations from the other)')
     ax = sns.heatmap(matrix2, linewidth=1, square=True, annot=True, fmt=".1f", xticklabels=labels, yticklabels=labels)
+    ax.set_title('Cross Recurrence (how many fixations from one scanpath are close enough to a fixations from the other)')
     plt.savefig(os.path.join(output_path, 'cross_recurrence.png'))
 
     # determinism
     matrix3 = get_measurement_results_matrix("determinism", avg_results_by_blur)
-    plt.title('Determinism (how many chains of 2 fixations are close enough)')
     plt.figure(figsize=(12, 12))
     ax = sns.heatmap(matrix3, linewidth=1, square=True, annot=True, fmt=".1f", xticklabels=labels, yticklabels=labels)
+    ax.set_title('Determinism (how many chains of 2 fixations are close enough)')
     plt.savefig(os.path.join(output_path, 'determinism.png'))
 
     # laminarity
     matrix4 = get_measurement_results_matrix("laminarity", avg_results_by_blur)
-    plt.title('Laminarity (how many chains are close enough)')
     plt.figure(figsize=(12, 12))
     ax = sns.heatmap(matrix4, linewidth=1, square=True, annot=True, fmt=".1f", xticklabels=labels, yticklabels=labels)
+    ax.set_title('Laminarity (how many chains are close enough)')
     plt.savefig(os.path.join(output_path, 'laminarity.png'))
 
     # center of recurrence mas
     matrix5 = get_measurement_results_matrix("CORM", avg_results_by_blur)
-    plt.title('CORM  (Center of recurrence mass: how far is it from the main diagonal)')
     plt.figure(figsize=(12, 12))
     ax = sns.heatmap(matrix5, linewidth=1, annot=True, fmt=".1f", xticklabels=labels, yticklabels=labels)
+    ax.set_title('CORM  (Center of recurrence mass: how far is it from the main diagonal)')
     plt.savefig(os.path.join(output_path, 'corm.png'))
 
     # fixation overlap
     matrix6 = get_measurement_results_matrix("fixation overlap", avg_results_by_blur)
-    plt.title('fixation overlap')
     plt.figure(figsize=(12, 12))
     ax = sns.heatmap(matrix6, linewidth=1, square=True, annot=True, fmt=".1f", xticklabels=labels, yticklabels=labels)
+    ax.set_title('fixation overlap')
     plt.savefig(os.path.join(output_path, 'fixation_overlap.png'))
 
 
@@ -184,5 +184,5 @@ def init_fixation_list_with_time(fixation_df):
 
 if __name__ == '__main__':
     input_path = '../../../../outputs/preprocessed_outputs/FGB/case6_long_aligned'
-    output_path = '../outputs/scanpath_comparison/'
+    output_path = '../outputs/scanpath_comparison'
     run(input_path=input_path, output_path=output_path)
