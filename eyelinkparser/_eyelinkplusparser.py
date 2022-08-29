@@ -18,6 +18,7 @@ class EyeLinkPlusParser(EyeLinkParser):
         self.blinks = []
         self.fixations = []
         self.images= [{'start time': 0, 'path': 'no image', 'location': (0,0), 'size': (0,0)}]
+        self.end_phase_called = False
         super(EyeLinkPlusParser, self).__init__(*args, **kwargs)
         self.last_trial_result = -1
         self.metadata = ParseMetadata()
@@ -137,6 +138,9 @@ class EyeLinkPlusParser(EyeLinkParser):
 
 
     def end_phase(self, l):
+        if self.end_phase_called:
+            return
+        self.end_phase_called = True
         self.saccades_df = pd.DataFrame.from_dict(self.saccades)
         self.saccades_df.sort_values(by='start time', inplace=True)
         del self.saccades

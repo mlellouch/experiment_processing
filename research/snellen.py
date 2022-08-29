@@ -34,9 +34,9 @@ def plot_y_location_to_var(parser):
     plt.plot(graph_x, graph_y)
 
 def run():
-    all_subjects = os.listdir('../parsed_outputs')
+    all_subjects = os.listdir('../outputs/parsed_outputs')
     for subject in all_subjects:
-        snellen_path = os.path.join('../parsed_outputs', subject, 'snellen.asc')
+        snellen_path = os.path.join('../outputs/parsed_outputs', subject, 'snellen.asc')
         parser = parse_file(
             parser=EyeLinkPlusParser,
             filepath=snellen_path,  # Folder with .asc files
