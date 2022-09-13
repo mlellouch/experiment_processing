@@ -1,3 +1,5 @@
+import pandas as pd
+
 from eyelinkparser import parse, defaulttraceprocessor, parse_file
 from eyelinkparser import EyeLinkPlusParser
 from research.metrics import util, fixation_analysis
@@ -87,7 +89,7 @@ class SampleEncoder:
         if self.args.special_saccade_encode and is_new_fixation:
             text_sample = 'S ' + text_sample
 
-        if args.new_line:
+        if self.args.new_line:
             text_sample += '\n'
 
         self.last_time = sample.time
@@ -95,7 +97,13 @@ class SampleEncoder:
         return text_sample
 
 
+def samples_to_text(args, samples:pd.DataFrame):
+    encoder = SampleEncoder(args)
+    text = ''
+    for sample in samples.iloc:
+        text += encoder.encode(sample)
 
+    return text
 
 def image_to_text(args, dst_path:str, parser, image_index):
     samples = parser.sample_df[parser.sample_df['image_index'] == image_index]
@@ -103,6 +111,9 @@ def image_to_text(args, dst_path:str, parser, image_index):
     with open(dst_path, 'w') as f:
         for sample in samples.iloc:
             f.write(encoder.encode(sample))
+
+
+
 
 
 
@@ -120,9 +131,6 @@ def generate_text_files(args, source_file:str, output_path:str):
         image_samples = parser.sample_df.loc[parser.sample_df['image_index'] == index]
         output_file = output_prefix + image['path'].replace('jpg', 'txt')
         image_to_text(args, dst_path=output_file, parser=parser, image_index=index)
-
-
-
 
 
 if __name__ == '__main__':

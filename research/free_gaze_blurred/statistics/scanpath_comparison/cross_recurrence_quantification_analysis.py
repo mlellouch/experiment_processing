@@ -20,11 +20,13 @@ def cross_recurrence_analysis(fixations1, fixations2, radius):
     fixations1_copy = fixations1.copy()
     fixations2_copy = fixations2.copy()
 
-    # truncate the longer list
-    del fixations1_copy[len(fixations2_copy):]
-    del fixations2_copy[len(fixations1_copy):]
+    # # truncate the longer list
+    # del fixations1_copy[len(fixations2_copy):]
+    # del fixations2_copy[len(fixations1_copy):]
 
     # calculates the distances between each two fixations fi and gj
+    fixations1_copy = fixations1_copy[['image_x', 'image_y']]
+    fixations2_copy = fixations2_copy[['image_x', 'image_y']]
     distances = cdist(fixations1_copy, fixations2_copy)
 
     # calculates crm
@@ -132,8 +134,8 @@ def calc_corm(crm):
     c = crm.sum()
     n = len(crm)
     acc = 0
-    for i in range(n):
-        for j in range(n):
+    for i in range(crm.shape[0]):
+        for j in range(crm.shape[1]):
             acc += (j - i) * crm[i][j]
     div = (n - 1) * c
     div = div if div != 0 else 1
@@ -172,7 +174,7 @@ def calc_horizontal_lines(matrix, length):
     count = 0
     count_length = 0
 
-    for i in range(n):
+    for i in range(matrix.shape[0]):
         horizontal = matrix[i]
         temp_count, temp_count_length = calc_ones(horizontal, length)
         count += temp_count
@@ -187,7 +189,7 @@ def calc_vertical_lines(matrix, length):
     count = 0
     count_length = 0
 
-    for i in range(n):
+    for i in range(matrix.shape[1]):
         vertical = matrix[:, i]
         temp_count, temp_count_length = calc_ones(vertical, length)
         count += temp_count

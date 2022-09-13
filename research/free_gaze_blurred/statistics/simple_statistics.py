@@ -198,5 +198,5 @@ def run_all(path, output_path):
 
 
 if __name__ == '__main__':
-    path = Path('../../../outputs/preprocessed_outputs/FGBS/lower_blur')
+    path = Path('../../../outputs/preprocessed_outputs/FGBS/case4_lower_blur')
     run_all(path, './outputs/FGBS_lower_blur')
