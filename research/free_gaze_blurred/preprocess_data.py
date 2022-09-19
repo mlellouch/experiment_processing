@@ -27,9 +27,9 @@ def run(file_path):
 
 
 if __name__ == '__main__':
-    file_path = os.path.join('../../outputs/parsed_outputs/FGBS/pair/FGBS_2022_09_05_20_59.asc')
+    file_path = os.path.join('../../outputs/parsed_outputs/FGBS/pair2/FGBS_2022_09_19_18_59.asc')
     parser = run(file_path)
-    output_path = '../../outputs/preprocessed_outputs/FGBS/pair/second/'
+    output_path = '../../outputs/preprocessed_outputs/FGBS/pair2/second/'
     os.makedirs(output_path, exist_ok=True)
     parser.fixations_df.to_csv(os.path.join(output_path, 'fixations.csv'))
     parser.sample_df.to_csv(os.path.join(output_path, 'samples.csv'))

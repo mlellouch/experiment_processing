@@ -107,8 +107,8 @@ def run(input_path1, input_path2, output_path, radius):
 
 
 if __name__ == '__main__':
-    pair = '../../../../outputs/preprocessed_outputs/FGBS/pair'
+    pair = '../../../../outputs/preprocessed_outputs/FGBS/pair2'
     path1 = os.path.join(pair, 'first')
     path2 = os.path.join(pair, 'second')
-    output_path = '../outputs/pair_comparison'
+    output_path = '../outputs/pair_comparison2'
     run(path1, path2, output_path, radius=100)

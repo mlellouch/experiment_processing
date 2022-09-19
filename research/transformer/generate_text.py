@@ -5,7 +5,7 @@ from eyelinkparser import EyeLinkPlusParser
 from research.metrics import util, fixation_analysis
 import os
 import itertools
-from string import ascii_lowercase
+from string import ascii_lowercase, ascii_letters
 import configargparse
 
 def parse_args():
